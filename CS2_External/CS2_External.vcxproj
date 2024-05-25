@@ -145,9 +145,11 @@
     <ClInclude Include="Globals.hpp" />
     <ClInclude Include="GlobalVars.h" />
     <ClInclude Include="helper.h" />
+    <ClInclude Include="json.hpp" />
     <ClInclude Include="MenuConfig.hpp" />
     <ClInclude Include="Offsets.h" />
     <ClInclude Include="offsets.hpp" />
+    <ClInclude Include="OffsetsUpdater.hpp" />
     <ClInclude Include="OS-ImGui\imgui\imconfig.h" />
     <ClInclude Include="OS-ImGui\imgui\imgui.h" />
     <ClInclude Include="OS-ImGui\imgui\imgui_impl_dx11.h" />
