@@ -31,13 +31,13 @@ bool Offset::UpdateOffsets()
 	using namespace Updater;
 
 	char documentsPath[MAX_PATH];
-	if (SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, 0, documentsPath) != S_OK) {
+	if (SHGetFolderPathA(NULL, CSIDL_PROFILE, NULL, 0, documentsPath) != S_OK) {
 		std::cout << "[Info] Error: Failed to get the Documents folder path." << std::endl;
 		return false;
 	}
 
 	std::string path = documentsPath;
-	path += "\\TKazer";
+	path += "\\Documents\\TKazer";
 
 	std::string offsetPath = path + "\\Offsets";
 	if (!fs::exists(offsetPath)) {
