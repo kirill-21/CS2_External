@@ -68,14 +68,13 @@ void Base_Radar::AddPoint(const Vec3& LocalPos, const float& LocalYaw, const Vec
 
 	PointPos.x = this->Pos.x + Distance * sin(Angle);
 	PointPos.y = this->Pos.y - Distance * cos(Angle);
-
+	
 	// Circle range
 	//Distance = sqrt(pow(this->Pos.x - PointPos.x, 2) + pow(this->Pos.y - PointPos.y, 2));
 	//if (Distance > this->RenderRange)
 	//	return;
 
 	// Rectangle range
-
 	if (PointPos.x < this->Pos.x - RenderRange || PointPos.x > this->Pos.x + RenderRange
 		|| PointPos.y > this->Pos.y + RenderRange || PointPos.y < this->Pos.y - RenderRange)
 		return;
@@ -84,11 +83,25 @@ void Base_Radar::AddPoint(const Vec3& LocalPos, const float& LocalYaw, const Vec
 	this->Points.push_back(Data);
 }
 
+void DrawTriangle(Vec2 Center, ImColor Color, float Width, float Height, float Yaw)
+{
+	Vec2 a, b, c;
+	Vec2 Re_a, Re_b, Re_c;
+	a = Vec2{ Center.x - Width / 2,Center.y };
+	b = Vec2{ Center.x + Width / 2,Center.y };
+	c = Vec2{ Center.x,Center.y - Height };
+	a = RevolveCoordinatesSystem(-Yaw, Center, a);
+	b = RevolveCoordinatesSystem(-Yaw, Center, b);
+	c = RevolveCoordinatesSystem(-Yaw, Center, c);
+	ImGui::GetForegroundDrawList()->AddTriangleFilled(
+		ImVec2(a.x, a.y),
+		ImVec2(b.x, b.y),
+		ImVec2(c.x, c.y),
+		Color);
+}
 
 void Base_Radar::Render()
 {
-	if (this->DrawList == nullptr)
-		return;
 	if (Width <= 0)
 		return;
 
@@ -120,8 +133,8 @@ void Base_Radar::Render()
 				// 圆形样式
 				this->DrawList->AddCircle(PointPos.ToImVec2(), this->CircleSize, PointColor);
 				this->DrawList->AddCircleFilled(PointPos.ToImVec2(), this->CircleSize, ImColor(0, 0, 0));
-			}	
-			else if (PointType==1)
+			}
+			else if (PointType == 1)
 			{
 				// 箭头样式
 				Vec2 a, b, c;
@@ -163,7 +176,7 @@ void Base_Radar::Render()
 				this->DrawList->AddCircleFilled(PointPos.ToImVec2(), 0.85 * this->ArcArrowSize, PointColor, 30);
 				this->DrawList->AddCircle(PointPos.ToImVec2(), 0.95 * this->ArcArrowSize, ImColor(0, 0, 0, 150), 0, 0.1);
 
-				TrianglePoint.x = PointPos.x + (this->ArcArrowSize+ this->ArcArrowSize/3) * cos(-Angle * M_PI / 180);
+				TrianglePoint.x = PointPos.x + (this->ArcArrowSize + this->ArcArrowSize / 3) * cos(-Angle * M_PI / 180);
 				TrianglePoint.y = PointPos.y - (this->ArcArrowSize + this->ArcArrowSize / 3) * sin(-Angle * M_PI / 180);
 
 				TrianglePoint_1.x = PointPos.x + this->ArcArrowSize * cos(-(Angle - 30) * M_PI / 180);

@@ -1,226 +1,107 @@
+﻿#include <string>
+#include <thread>
+#include <future>
+#include <iostream>
+
 #include "Cheats.h"
 #include "Render.hpp"
 #include "MenuConfig.hpp"
-#include "Utils/ConfigMenu.hpp"
-#include "Utils/ConfigSaver.hpp"
 
-void Cheats::Menu()
+#include "Utils/Initial/Init.h"
+
+#include "Features/ESP.h"
+#include "Features/GUI.h"
+#include "Features/RCS.H"
+#include "Features/BombTimer.h"
+#include "Features/SpectatorList.h"
+
+int PreviousTotalHits = 0;
+
+// Does not work and not use it for now
+void Cheats::KeyCheckThread()
 {
-	static bool IsMenuInit = false;
-	if (!IsMenuInit)
+	try
 	{
-		ImGui::GetStyle().Colors[ImGuiCol_WindowBg].w = 0.75;
-		IsMenuInit = true;
+        if ((GetAsyncKeyState(VK_INSERT) & 0x8000) || (GetAsyncKeyState(VK_DELETE) & 0x8000))
+		{
+			MenuConfig::ShowMenu = !MenuConfig::ShowMenu;
+		}
+		std::this_thread::sleep_for(std::chrono::milliseconds(150));
 	}
-
-	ImGui::Begin("Menu",nullptr,ImGuiWindowFlags_AlwaysAutoResize);
-	{
-		ImGui::BeginTabBar("Cheat");
-		// esp menu
-		if (ImGui::BeginTabItem("ESP"))
-		{
-			Gui.MyCheckBox("BoxESP", &MenuConfig::ShowBoxESP);
-			ImGui::SameLine();
-			ImGui::ColorEdit4("##BoxColor", reinterpret_cast<float*>(&MenuConfig::BoxColor), ImGuiColorEditFlags_NoInputs);
-
-			ImGui::Combo("BoxType", &MenuConfig::BoxType, "Normal\0Dynamic");
-
-			Gui.MyCheckBox("BoneESP", &MenuConfig::ShowBoneESP);
-			ImGui::SameLine();
-			ImGui::ColorEdit4("##BoneColor", reinterpret_cast<float*>(&MenuConfig::BoneColor), ImGuiColorEditFlags_NoInputs);
-
-			Gui.MyCheckBox("EyeRay", &MenuConfig::ShowEyeRay);
-			ImGui::SameLine();
-			ImGui::ColorEdit4("##EyeRay", reinterpret_cast<float*>(&MenuConfig::EyeRayColor), ImGuiColorEditFlags_NoInputs);
-
-			Gui.MyCheckBox("HealthBar", &MenuConfig::ShowHealthBar);
-			ImGui::Combo("HealthBarType", &MenuConfig::HealthBarType, "Vetical\0Horizontal");
-
-			Gui.MyCheckBox("WeaponText", &MenuConfig::ShowWeaponESP);
-			Gui.MyCheckBox("Distance", &MenuConfig::ShowDistance);
-			Gui.MyCheckBox("PlayerName", &MenuConfig::ShowPlayerName);
-
-			Gui.MyCheckBox("HeadShootLine", &MenuConfig::ShowHeadShootLine);
-			ImGui::SameLine();
-			ImGui::ColorEdit4("##HeadShootLineColor", reinterpret_cast<float*>(&MenuConfig::HeadShootLineColor), ImGuiColorEditFlags_NoInputs);
-
-			Gui.MyCheckBox("FovLine", &MenuConfig::ShowFovLine);
-			ImGui::SameLine();
-			ImGui::ColorEdit4("##FovLineColor", reinterpret_cast<float*>(&MenuConfig::FovLineColor), ImGuiColorEditFlags_NoInputs);
-			float FovLineSizeMin = 20.f, FovLineSizeMax = 120.f;
-			Gui.SliderScalarEx1("FovLineSize", ImGuiDataType_Float, &MenuConfig::FovLineSize, &FovLineSizeMin, &FovLineSizeMax, "%.1f", ImGuiSliderFlags_None);
-		
-			Gui.MyCheckBox("LineToEnemy", &MenuConfig::ShowLineToEnemy);
-			ImGui::SameLine();
-			ImGui::ColorEdit4("##LineToEnemyColor", reinterpret_cast<float*>(&MenuConfig::LineToEnemyColor), ImGuiColorEditFlags_NoInputs);
-
-			Gui.MyCheckBox("CrossHair", &MenuConfig::ShowCrossHair);
-			ImGui::SameLine();
-			ImGui::ColorEdit4("##CrossHairColor", reinterpret_cast<float*>(&MenuConfig::CrossHairColor), ImGuiColorEditFlags_NoInputs);
-			float CrossHairSizeMin = 15, CrossHairSizeMax = 200;
-			Gui.SliderScalarEx1("CrossHairSize", ImGuiDataType_Float, &MenuConfig::CrossHairSize, &CrossHairSizeMin, &CrossHairSizeMax, "%.1f", ImGuiSliderFlags_None);
-		
-			ImGui::EndTabItem();
-		}
-
-		// aimbot menu
-		if (ImGui::BeginTabItem("AimBot "))
-		{
-			Gui.MyCheckBox("AimBot", &MenuConfig::AimBot);
-
-			if (ImGui::Combo("AimKey", &MenuConfig::AimBotHotKey, "LBUTTON\0MENU\0RBUTTON\0XBUTTON1\0XBUTTON2\0CAPITAL\0SHIFT\0CONTROL"))// added LBUTTON
-			{
-				AimControl::SetHotKey(MenuConfig::AimBotHotKey);
-			}
-
-			float FovMin = 0.1f, FovMax = 89.f;
-			float SmoothMin = 0.f, SmoothMax = 0.9f;
-			Gui.SliderScalarEx1("AimFov", ImGuiDataType_Float, &AimControl::AimFov, &FovMin, &FovMax, "%.1f", ImGuiSliderFlags_None);
-			Gui.MyCheckBox("FovCircle", &MenuConfig::ShowAimFovRange);
-			ImGui::SameLine();
-			ImGui::ColorEdit4("##FovCircleColor", reinterpret_cast<float*>(&MenuConfig::AimFovRangeColor), ImGuiColorEditFlags_NoInputs);
-
-			Gui.SliderScalarEx1("Smooth", ImGuiDataType_Float, &AimControl::Smooth, &SmoothMin, &SmoothMax, "%.1f", ImGuiSliderFlags_None);
-			if (ImGui::Combo("AimPos", &MenuConfig::AimPosition, "Head\0Neck\0Spine"))
-			{
-				switch (MenuConfig::AimPosition)
-				{
-				case 0:
-					MenuConfig::AimPositionIndex = BONEINDEX::head;
-					break;
-				case 1:
-					MenuConfig::AimPositionIndex = BONEINDEX::neck_0;
-					break;
-				case 2:
-					MenuConfig::AimPositionIndex = BONEINDEX::spine_1;
-					break;
-				default:
-					break;
-				}
-			}
-			int BulletMin = 1, BulletMax = 6;
-			float RecoilMin = 0.f, RecoilMax = 2.f;
-			Gui.SliderScalarEx1("Start Bullet", ImGuiDataType_U32, &AimControl::RCSBullet, &BulletMin, &BulletMax, "%d", ImGuiSliderFlags_None);
-			Gui.SliderScalarEx1("RCS Yaw", ImGuiDataType_Float, &AimControl::RCSScale.x, &RecoilMin, &RecoilMax, "%.1f", ImGuiSliderFlags_None);
-			Gui.SliderScalarEx1("RCS Pitch", ImGuiDataType_Float, &AimControl::RCSScale.y, &RecoilMin, &RecoilMax, "%.1f", ImGuiSliderFlags_None);
-			Gui.MyCheckBox("VisibleCheck", &MenuConfig::VisibleCheck);
-		
-			ImGui::EndTabItem();
-		}
-
-		// Radar menu
-		if (ImGui::BeginTabItem("Radar "))
-		{
-			Gui.MyCheckBox("Radar", &MenuConfig::ShowRadar);
-			ImGui::Combo("RadarType", &MenuConfig::RadarType, "Circle\0Arrow\0CircleWithArrow");
-
-			Gui.MyCheckBox("CrossLine", &MenuConfig::ShowRadarCrossLine);
-			ImGui::SameLine();
-			ImGui::ColorEdit4("##CrossLineColor", reinterpret_cast<float*>(&MenuConfig::RadarCrossLineColor), ImGuiColorEditFlags_NoInputs);
-
-			float ProportionMin = 500.f, ProportionMax = 3300.f;
-			float RadarRangeMin = 100.f, RadarRangeMax = 300.f;
-			float RadarPointSizeProportionMin = 0.8f, RadarPointSizeProportionMax = 2.f;
-			Gui.SliderScalarEx1("PointSize", ImGuiDataType_Float, &MenuConfig::RadarPointSizeProportion, &RadarPointSizeProportionMin, &RadarPointSizeProportionMax, "%.1f", ImGuiSliderFlags_None);
-			Gui.SliderScalarEx1("Proportion", ImGuiDataType_Float, &MenuConfig::Proportion, &ProportionMin, &ProportionMax, "%.1f", ImGuiSliderFlags_None);
-			Gui.SliderScalarEx1("RadarRange", ImGuiDataType_Float, &MenuConfig::RadarRange, &RadarRangeMin, &RadarRangeMax, "%.1f", ImGuiSliderFlags_None);
-		
-			ImGui::EndTabItem();
-		}
-
-		// TriggerBot
-		if (ImGui::BeginTabItem("TriggerBot "))
-		{
-			Gui.MyCheckBox("TriggerBot", &MenuConfig::TriggerBot);
-
-			if (ImGui::Combo("TriggerKey", &MenuConfig::TriggerHotKey, "MENU\0RBUTTON\0XBUTTON1\0XBUTTON2\0CAPITAL\0SHIFT\0CONTROL"))
-			{
-				TriggerBot::SetHotKey(MenuConfig::TriggerHotKey);
-			}
-			if (ImGui::Combo("TriggerMode", &MenuConfig::TriggerMode, "Hold\0Toggle"))
-			{
-				TriggerBot::SetMode(MenuConfig::TriggerMode);
-			}
-
-			DWORD TriggerDelayMin = 15, TriggerDelayMax = 170;
-			Gui.SliderScalarEx1("Delay", ImGuiDataType_U32, &TriggerBot::TriggerDelay, &TriggerDelayMin, &TriggerDelayMax, "%d", ImGuiSliderFlags_None);
-
-			ImGui::EndTabItem();
-		}
-
-		if (ImGui::BeginTabItem("Misc "))
-		{
-			// moved to misc
-			Gui.MyCheckBox("AntiFlashbang", &MenuConfig::AntiFlashbang);
-			// TeamCheck
-			Gui.MyCheckBox("TeamCheck", &MenuConfig::TeamCheck);
-
-			ImGui::SameLine();
-			// OBS Bypass
-			Gui.MyCheckBox("OBSBypass", &MenuConfig::OBSBypass);
-
-			//Bunnyhopping
-			Gui.MyCheckBox("Bunnyhop ", &MenuConfig::BunnyHop);
-			ImGui::SameLine();
-			Gui.MyCheckBox("ShowWhenSpec", &MenuConfig::ShowWhenSpec);
-
-			ImGui::EndTabItem();
-
-		}
-
-		// Render config saver
-		ConfigMenu::RenderConfigMenu();
-		
-		ImGui::Separator();
-
-		ImGui::Text("[HOME] HideMenu");
-
-		ImGui::EndTabBar();
-	}ImGui::End();
+	catch (const std::exception& e) {
+		std::cout << e.what() << std::endl;
+	}
 }
 
 void Cheats::RadarSetting(Base_Radar& Radar)
 {
 	// Radar window
-	ImGui::SetNextWindowBgAlpha(0.1f);
+	ImGui::SetNextWindowBgAlpha(RadarCFG::RadarBgAlpha);
 	ImGui::Begin("Radar", 0, ImGuiWindowFlags_NoResize);
-	ImGui::SetWindowSize({ MenuConfig::RadarRange * 2,MenuConfig::RadarRange * 2 });
+	ImGui::SetWindowSize({ RadarCFG::RadarRange * 2,RadarCFG::RadarRange * 2 });
+	
+	if (!RadarCFG::customRadar)
+	{
+		ImGui::SetWindowPos(ImVec2(0, 0));
+		RadarCFG::ShowRadarCrossLine = false;
+		RadarCFG::Proportion = 3300.f;
+		RadarCFG::RadarPointSizeProportion = 1.f;
+		RadarCFG::RadarRange = 150.f;
+		RadarCFG::RadarBgAlpha = 0.1f;
+	}
+		
 
 	// Radar.SetPos({ Gui.Window.Size.x / 2,Gui.Window.Size.y / 2 });
 	Radar.SetDrawList(ImGui::GetWindowDrawList());
-	Radar.SetPos({ ImGui::GetWindowPos().x + MenuConfig::RadarRange, ImGui::GetWindowPos().y + MenuConfig::RadarRange });
-	Radar.SetProportion(MenuConfig::Proportion);
-	Radar.SetRange(MenuConfig::RadarRange);
-	Radar.SetSize(MenuConfig::RadarRange * 2);
-	Radar.SetCrossColor(MenuConfig::RadarCrossLineColor);
+	Radar.SetPos({ ImGui::GetWindowPos().x + RadarCFG::RadarRange, ImGui::GetWindowPos().y + RadarCFG::RadarRange });
+	Radar.SetProportion(RadarCFG::Proportion);
+	Radar.SetRange(RadarCFG::RadarRange);
+	Radar.SetSize(RadarCFG::RadarRange * 2);
+	Radar.SetCrossColor(RadarCFG::RadarCrossLineColor);
 
-	Radar.ArcArrowSize *= MenuConfig::RadarPointSizeProportion;
-	Radar.ArrowSize *= MenuConfig::RadarPointSizeProportion;
-	Radar.CircleSize *= MenuConfig::RadarPointSizeProportion;
+	Radar.ArcArrowSize *= RadarCFG::RadarPointSizeProportion;
+	Radar.ArrowSize *= RadarCFG::RadarPointSizeProportion;
+	Radar.CircleSize *= RadarCFG::RadarPointSizeProportion;
 
-	Radar.ShowCrossLine = MenuConfig::ShowRadarCrossLine;
+	Radar.ShowCrossLine = RadarCFG::ShowRadarCrossLine;
 	Radar.Opened = true;
 }
 
-void Cheats::Run()
+void Cheats::RenderCrossHair(ImDrawList* drawList) noexcept
 {
-	// Show menu
-	static std::chrono::time_point LastTimePoint = std::chrono::steady_clock::now();
-	auto CurTimePoint = std::chrono::steady_clock::now();
+	if (!CrosshairsCFG::ShowCrossHair)
+		return;
 
-	if (GetAsyncKeyState(VK_HOME)
-		&& CurTimePoint - LastTimePoint >= std::chrono::milliseconds(150))
-	{
-		// Check key state per 150ms once to avoid loop.
+	if(CrosshairsCFG::isAim && MenuConfig::TargetingCrosshairs)
+		Render::DrawCrossHair(drawList, ImVec2(ImGui::GetIO().DisplaySize.x / 2, ImGui::GetIO().DisplaySize.y / 2), ImGui::ColorConvertFloat4ToU32(CrosshairsCFG::TargetedColor));
+	else
+		Render::DrawCrossHair(drawList, ImVec2(ImGui::GetIO().DisplaySize.x / 2, ImGui::GetIO().DisplaySize.y / 2), ImGui::ColorConvertFloat4ToU32(CrosshairsCFG::CrossHairColor));
+}
+
+void Cheats::Run()
+{	
+	// Show menu
+	static DWORD lastTick = 0; 
+	DWORD currentTick = GetTickCount(); 
+	if (((GetAsyncKeyState(VK_INSERT) & 0x8000) || (GetAsyncKeyState(VK_DELETE) & 0x8000)) && currentTick - lastTick >= 250) {
 		MenuConfig::ShowMenu = !MenuConfig::ShowMenu;
-		LastTimePoint = CurTimePoint;
+		lastTick = currentTick;
+	}
+//	std::thread keyCheckThread(KeyCheckThread);
+//  std::future<void> Thread_PlayerESP = std::async(ESP::RenderPlayerESP, std::ref(Entity), std::ref(Rect));
+	if (MenuConfig::ShowMenu)
+	{
+		GUI::NewGui();
 	}
 
-	if (MenuConfig::ShowMenu)
-		Menu();
+	if (!Init::Client::isGameWindowActive() && !MenuConfig::ShowMenu)
+		return;
+
+	// The overlay should be rendered at the bottom
+	Misc::NightMode();
 
 	// Update matrix
-	if (!ProcessMgr.ReadMemory(gGame.GetMatrixAddress(), gGame.View.Matrix, 64))
+	if(!ProcessMgr.ReadMemory(gGame.GetMatrixAddress(), gGame.View.Matrix,64))
 		return;
 
 	// Update EntityList Entry
@@ -235,11 +116,12 @@ void Cheats::Run()
 		return;
 
 	// LocalEntity
-	CEntity LocalEntity;
+	CEntity LocalEntity, ServerEntity;
 	static int LocalPlayerControllerIndex = 1;
+	LocalEntity.UpdateClientData();
 	if (!LocalEntity.UpdateController(LocalControllerAddress))
 		return;
-	if (!LocalEntity.UpdatePawn(LocalPawnAddress) && !MenuConfig::ShowWhenSpec)
+	if (!LocalEntity.UpdatePawn(LocalPawnAddress) && !MiscCFG::WorkInSpec)
 		return;
 
 	// HealthBar Map
@@ -249,11 +131,12 @@ void Cheats::Run()
 	float DistanceToSight = 0;
 	float MaxAimDistance = 100000;
 	Vec3  HeadPos{ 0,0,0 };
-	Vec3  AimPos{ 0,0,0 };
+	Vec2  Angles{ 0,0 };
+	std::vector<Vec3> AimPosList;
 
 	// Radar Data
 	Base_Radar Radar;
-	if (MenuConfig::ShowRadar)
+	if (RadarCFG::ShowRadar)
 		RadarSetting(Radar);
 
 	for (int i = 0; i < 64; i++)
@@ -262,28 +145,32 @@ void Cheats::Run()
 		DWORD64 EntityAddress = 0;
 		if (!ProcessMgr.ReadMemory<DWORD64>(gGame.GetEntityListEntry() + (i + 1) * 0x78, EntityAddress))
 			continue;
-
 		if (EntityAddress == LocalEntity.Controller.Address)
 		{
 			LocalPlayerControllerIndex = i;
 			continue;
 		}
-
 		if (!Entity.UpdateController(EntityAddress))
 			continue;
-
 		if (!Entity.UpdatePawn(Entity.Pawn.Address))
 			continue;
 
 		if (MenuConfig::TeamCheck && Entity.Controller.TeamID == LocalEntity.Controller.TeamID)
 			continue;
 
+		Misc::MoneyService(Entity);
+
 		if (!Entity.IsAlive())
 			continue;
+//		if (MenuConfig::VisibleCheck && (!Entity.Pawn.bSpottedByMask > 0))
+//			continue;
+
 
 		// Add entity to radar
-		if (MenuConfig::ShowRadar)
-			Radar.AddPoint(LocalEntity.Pawn.Pos, LocalEntity.Pawn.ViewAngle.y, Entity.Pawn.Pos, ImColor(237, 85, 106, 200), MenuConfig::RadarType, Entity.Pawn.ViewAngle.y);
+		if (RadarCFG::ShowRadar)
+			Radar.AddPoint(LocalEntity.Pawn.Pos, LocalEntity.Pawn.ViewAngle.y, Entity.Pawn.Pos, ImColor(237, 85, 106, 200), RadarCFG::RadarType, Entity.Pawn.ViewAngle.y);
+		
+		Misc::RadarHack(Entity);
 
 		if (!Entity.IsInScreen())
 			continue;
@@ -298,151 +185,141 @@ void Cheats::Run()
 			}
 		}*/
 
-		DistanceToSight = Entity.GetBone().BonePosList[BONEINDEX::head].ScreenPos.DistanceTo({ Gui.Window.Size.x / 2,Gui.Window.Size.y / 2 });
-
-
-		if (DistanceToSight < MaxAimDistance)
+		//update Bone select
+		if (AimControl::HitboxList.size() != 0)
 		{
-			MaxAimDistance = DistanceToSight;
-			// From: https://github.com/redbg/CS2-Internal/blob/fc8e64430176a62f8800b7467884806708a865bb/src/include/Cheats.hpp#L129
-			if (!MenuConfig::VisibleCheck ||
-				Entity.Pawn.bSpottedByMask & (DWORD64(1) << (LocalPlayerControllerIndex)) ||
-				LocalEntity.Pawn.bSpottedByMask & (DWORD64(1) << (i)))
+			for (int i = 0; i < AimControl::HitboxList.size(); i++)
 			{
-				AimPos = Entity.GetBone().BonePosList[MenuConfig::AimPositionIndex].Pos;
-				if (MenuConfig::AimPositionIndex == BONEINDEX::head)
-					AimPos.z -= 1.f;
+				Vec3 TempPos;
+				DistanceToSight = Entity.GetBone().BonePosList[AimControl::HitboxList[i]].ScreenPos.DistanceTo({ Gui.Window.Size.x / 2,Gui.Window.Size.y / 2 });
+
+				if (DistanceToSight < MaxAimDistance)
+				{
+					MaxAimDistance = DistanceToSight;
+
+					if (!MenuConfig::VisibleCheck ||
+						Entity.Pawn.bSpottedByMask & (DWORD64(1) << (LocalPlayerControllerIndex)) ||
+						LocalEntity.Pawn.bSpottedByMask & (DWORD64(1) << (i)))
+					{
+						TempPos = Entity.GetBone().BonePosList[AimControl::HitboxList[i]].Pos;
+						if (AimControl::HitboxList[i] == BONEINDEX::head)
+							TempPos.z -= 1.f;
+
+						AimPosList.push_back(TempPos);
+					}
+				}
 			}
 		}
 
-		// Draw Bone
-		if (MenuConfig::ShowBoneESP)
-			Render::DrawBone(Entity, MenuConfig::BoneColor, 1.3);
-
-		// Draw eyeRay
-		if (MenuConfig::ShowEyeRay)
-			Render::ShowLosLine(Entity, 50, MenuConfig::EyeRayColor, 1.3);
-
-		// Box
-		ImVec4 Rect;
-		switch (MenuConfig::BoxType)
+		if (ESPConfig::ESPenabled)
 		{
-		case 0:
-			Rect = Render::Get2DBox(Entity);
-			break;
-		case 1:
-			Rect = Render::Get2DBoneRect(Entity);
-			break;
-		default:
-			break;
-		}
+			ImVec4 Rect = ESP::GetBoxRect(Entity, MenuConfig::BoxType);
+			int distance = static_cast<int>(Entity.Pawn.Pos.DistanceTo(LocalEntity.Pawn.Pos) / 100);
 
-		// Line to enemy
-		if (MenuConfig::ShowLineToEnemy)
-			Render::LineToEnemy(Rect, MenuConfig::LineToEnemyColor, 1.2);
-
-		// Draw Box
-		if (MenuConfig::ShowBoxESP)
-			Gui.Rectangle({ Rect.x,Rect.y }, { Rect.z,Rect.w }, MenuConfig::BoxColor, 1.3);
-
-		// Draw HealthBar
-		if (MenuConfig::ShowHealthBar)
-		{
-			ImVec2 HealthBarPos, HealthBarSize;
-			if (MenuConfig::HealthBarType == 0)
+			if (ESPConfig::RenderDistance == 0 || (distance <= ESPConfig::RenderDistance && ESPConfig::RenderDistance > 0))
 			{
-				// Vertical
-				HealthBarPos = { Rect.x - 7.f,Rect.y };
-				HealthBarSize = { 7 ,Rect.w };
+				ESP::RenderPlayerESP(LocalEntity, Entity, Rect, LocalPlayerControllerIndex, i);
+				Render::DrawDistance(LocalEntity, Entity, Rect);
+
+				// Draw HealthBar
+				if (ESPConfig::ShowHealthBar)
+				{
+					ImVec2 HealthBarPos = { Rect.x - 6.f,Rect.y };
+					ImVec2 HealthBarSize = { 4 ,Rect.w };
+					Render::DrawHealthBar(EntityAddress, 100, Entity.Pawn.Health, HealthBarPos, HealthBarSize);
+				}
+
+				// Draw Ammo
+				// When player is using knife or nade, Ammo = -1.
+				if (ESPConfig::AmmoBar && Entity.Pawn.Ammo != -1)
+				{
+					ImVec2 AmmoBarPos = { Rect.x, Rect.y + Rect.w + 2 };
+					ImVec2 AmmoBarSize = { Rect.z,4 };
+					Render::DrawAmmoBar(EntityAddress, Entity.Pawn.MaxAmmo, Entity.Pawn.Ammo, AmmoBarPos, AmmoBarSize);
+				}
+
+				// Draw Armor
+				// It is meaningless to render a empty bar
+				if (ESPConfig::ArmorBar && Entity.Pawn.Armor > 0)
+				{
+					bool HasHelmet;
+					ImVec2 ArmorBarPos;
+					ProcessMgr.ReadMemory(Entity.Controller.Address + Offset::PlayerController.HasHelmet, HasHelmet);
+					ArmorBarPos = { Rect.x + Rect.z + 2.f,Rect.y };
+					ImVec2 ArmorBarSize = { 4.f,Rect.w };
+					Render::DrawArmorBar(EntityAddress, 100, Entity.Pawn.Armor, HasHelmet, ArmorBarPos, ArmorBarSize);
+				}
 			}
-			else
-			{
-				// Horizontal
-				HealthBarPos = { Rect.x + Rect.z / 2 - 70 / 2,Rect.y - 13 };
-				HealthBarSize = { 70,8 };
-			}
-			Render::DrawHealthBar(EntityAddress, 100, Entity.Pawn.Health, HealthBarPos, HealthBarSize, MenuConfig::HealthBarType);
 		}
-
-		// Draw weaponName
-		if (MenuConfig::ShowWeaponESP)
-			Gui.StrokeText(Entity.Pawn.WeaponName, { Rect.x,Rect.y + Rect.w }, ImColor(255, 255, 255, 255), 14);
-
-		if (MenuConfig::ShowDistance)
-			Render::DrawDistance(LocalEntity, Entity, Rect);
-
-		if (MenuConfig::ShowPlayerName)
-		{
-			if (MenuConfig::HealthBarType == 0)
-				Gui.StrokeText(Entity.Controller.PlayerName, { Rect.x + Rect.z / 2,Rect.y - 14 }, ImColor(255, 255, 255, 255), 14, true);
-			else
-				Gui.StrokeText(Entity.Controller.PlayerName, { Rect.x + Rect.z / 2,Rect.y - 13 - 14 }, ImColor(255, 255, 255, 255), 14, true);
-		}
-
+		// Glow::Run(Entity);
+		// Misc::SpectatorList(LocalEntity, Entity);
 	}
-
-	// Fov line
-	if (MenuConfig::ShowFovLine)
-		Render::DrawFov(LocalEntity, MenuConfig::FovLineSize, MenuConfig::FovLineColor, 1);
-
+	
 	// Radar render
-	if (MenuConfig::ShowRadar)
+	if(RadarCFG::ShowRadar)
 	{
 		Radar.Render();
-		//End for radar window
 		ImGui::End();
 	}
 
 	// TriggerBot
-	if (MenuConfig::TriggerMode == 1 && MenuConfig::TriggerBot && GetAsyncKeyState(TriggerBot::HotKey) && MenuConfig::Pressed&& CurTimePoint - LastTimePoint >= std::chrono::milliseconds(150))
-	{
-		MenuConfig::Pressed = false;
-		LastTimePoint = CurTimePoint;
-	}
-	else if (MenuConfig::TriggerMode == 1 && MenuConfig::TriggerBot && GetAsyncKeyState(TriggerBot::HotKey)&& !MenuConfig::Pressed&& CurTimePoint - LastTimePoint >= std::chrono::milliseconds(150))
-	{
-		MenuConfig::Pressed = true;
-		LastTimePoint = CurTimePoint;
-	}
+	if (MenuConfig::TriggerBot && (GetAsyncKeyState(TriggerBot::HotKey) || MenuConfig::TriggerAlways))
+		TriggerBot::Run(LocalEntity);	
 
-	if (MenuConfig::TriggerMode == 0 && MenuConfig::TriggerBot && GetAsyncKeyState(TriggerBot::HotKey))
-	{
-		MenuConfig::Shoot = true;
-		TriggerBot::Run(LocalEntity);
-		MenuConfig::Shoot = false;
-	}
-	else if (MenuConfig::TriggerMode == 1 && MenuConfig::TriggerBot && MenuConfig::Pressed) 
-	{
-		MenuConfig::Shoot = true;
-		TriggerBot::Run(LocalEntity);
-		MenuConfig::Shoot = false;
-	}
-			
+	Misc::HitManager(LocalEntity, PreviousTotalHits);
+	Misc::HitMarker(30.f, 10.f);
+	Misc::FlashImmunity(LocalEntity);
+	Misc::FastStop();
+	Misc::FovChanger(LocalEntity);
+	Misc::Watermark(LocalEntity);
+	Misc::FakeDuck(LocalEntity);
+	Misc::BunnyHop(LocalEntity);
+	Misc::CheatList();
+	Misc::ForceScope(LocalEntity);
+	Misc::JumpThrow(LocalEntity);
 
+
+	// Fov line
+	Render::DrawFov(LocalEntity, MenuConfig::FovLineSize, MenuConfig::FovLineColor, 1);
 
 	// HeadShoot Line
-	if(MenuConfig::ShowHeadShootLine)
-		Render::HeadShootLine(LocalEntity, MenuConfig::HeadShootLineColor);
-
-	// CrossHair
-	if (MenuConfig::ShowCrossHair)
-		Render::DrawCrossHair();
-
-	// Fov circle
-	if(MenuConfig::ShowAimFovRange)
-		Render::DrawFovCircle(LocalEntity);
+	Render::HeadShootLine(LocalEntity, MenuConfig::HeadShootLineColor);
 	
-	if (MenuConfig::BunnyHop)
-		Bunnyhop::Run(LocalEntity);
+	// CrossHair
+	TriggerBot::TargetCheck(LocalEntity);
+	Misc::AirCheck(LocalEntity);
+	RenderCrossHair(ImGui::GetBackgroundDrawList());
 
-	if (MenuConfig::AntiFlashbang)
-		AntiFlashbang::Run(LocalEntity);
+	bmb::RenderWindow();
+	
+	// Aimbot
+	if (MenuConfig::AimBot) {
+		Render::DrawFovCircle(LocalEntity);
 
-	if (MenuConfig::AimBot && GetAsyncKeyState(AimControl::HotKey))
-	{
-		if (AimPos != Vec3(0, 0, 0))
-		{
-			AimControl::AimBot(LocalEntity, LocalEntity.Pawn.CameraPos, AimPos);
+		if (MenuConfig::AimAlways || GetAsyncKeyState(AimControl::HotKey)) {
+			if (AimPosList.size() != 0) {
+				if (AimControl::Rage && !MenuConfig::SafeMode)
+					AimControl::Ragebot(LocalEntity, LocalEntity.Pawn.CameraPos, AimPosList);
+				else
+					AimControl::AimBot(LocalEntity, LocalEntity.Pawn.CameraPos, AimPosList);
+			}
 		}
+
+		if (MenuConfig::AimToggleMode && (GetAsyncKeyState(AimControl::HotKey) & 0x8000) && currentTick - lastTick >= 200) {
+			AimControl::switchToggle();
+			lastTick = currentTick;
+		}
+	}
+
+	if (!AimControl::AimBot || !AimControl::HasTarget)
+		RCS::RecoilControl(LocalEntity);
+
+	GUI::InitHitboxList();
+
+	int currentFPS = static_cast<int>(ImGui::GetIO().Framerate);
+	if (currentFPS > MenuConfig::MaxRenderFPS)
+	{
+		int FrameWait = round(1000.0 / MenuConfig::MaxRenderFPS);
+		std::this_thread::sleep_for(std::chrono::milliseconds(FrameWait));
 	}
 }

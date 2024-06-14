@@ -22,4 +22,12 @@ public:
 		
 		return true;
 	}
+
+	Vec2 GetScreenCenterVec2()
+	{
+		Vec2 Pos;
+		Pos.x = ImGui::GetIO().DisplaySize.x / 2;
+		Pos.y = ImGui::GetIO().DisplaySize.y / 2;
+		return Pos;
+	}
 };

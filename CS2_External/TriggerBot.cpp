@@ -1,27 +1,45 @@
 #include "TriggerBot.h"
 
+DWORD uHandle = 0;
+DWORD64 ListEntry = 0;
+DWORD64 PawnAddress = 0;
+CEntity Entity;
+bool AllowShoot = false;
+
+void TriggerBot::ReleaseMouseButton()
+{
+	std::this_thread::sleep_for(std::chrono::milliseconds(ShotDuration));
+	mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+}
+
 void TriggerBot::Run(const CEntity& LocalEntity)
 {
-	DWORD uHandle = 0;
 	if (!ProcessMgr.ReadMemory<DWORD>(LocalEntity.Pawn.Address + Offset::Pawn.iIDEntIndex, uHandle))
 		return;
 	if (uHandle == -1)
 		return;
 
-	DWORD64 ListEntry = 0;
 	ListEntry = ProcessMgr.TraceAddress(gGame.GetEntityListAddress(), { 0x8 * (uHandle >> 9) + 0x10,0x0 });
 	if (ListEntry == 0)
 		return;
 
-	DWORD64 PawnAddress = 0;
 	if (!ProcessMgr.ReadMemory<DWORD64>(ListEntry + 0x78 * (uHandle & 0x1FF), PawnAddress))
 		return;
 
-	CEntity Entity;
 	if (!Entity.UpdatePawn(PawnAddress))
 		return;
 
-	bool AllowShoot = false;
+	if (!IgnoreFlash && LocalEntity.Pawn.FlashDuration > 0.f)
+		return;
+
+	if (ScopeOnly)
+	{
+		bool isScoped;
+		ProcessMgr.ReadMemory<bool>(LocalEntity.Pawn.Address + Offset::Pawn.isScoped, isScoped);
+		if (!isScoped) {
+			return;
+		}
+	}
 
 	if (MenuConfig::TeamCheck)
 		AllowShoot = LocalEntity.Pawn.TeamID != Entity.Pawn.TeamID && Entity.Pawn.Health > 0;
@@ -39,9 +57,33 @@ void TriggerBot::Run(const CEntity& LocalEntity)
 		if (!isAlreadyShooting)
 		{
 			mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
-			mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
+			std::thread TriggerThread(ReleaseMouseButton);
+			TriggerThread.detach();
 		}
-
 		LastTimePoint = CurTimePoint;
+	}
+}
+
+void TriggerBot::TargetCheck(const CEntity& LocalEntity) noexcept
+{
+	if (!ProcessMgr.ReadMemory<DWORD>(LocalEntity.Pawn.Address + Offset::Pawn.iIDEntIndex, uHandle) || uHandle == -1)
+	{
+		CrosshairsCFG::isAim = false;
+	}
+	else
+	{
+		ListEntry = ProcessMgr.TraceAddress(gGame.GetEntityListAddress(), { 0x8 * (uHandle >> 9) + 0x10, 0x0 });
+		if (ListEntry != 0)
+		{
+			if (ProcessMgr.ReadMemory<DWORD64>(ListEntry + 0x78 * (uHandle & 0x1FF), PawnAddress))
+			{
+				if (Entity.UpdatePawn(PawnAddress))
+				{
+					CrosshairsCFG::isAim = CrosshairsCFG::TeamCheck ? (LocalEntity.Pawn.TeamID != Entity.Pawn.TeamID) : true;
+					return;
+				}
+			}
+		}
+		CrosshairsCFG::isAim = false;
 	}
 }

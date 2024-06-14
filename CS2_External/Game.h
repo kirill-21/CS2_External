@@ -9,6 +9,13 @@ class CGame
 private:
 	struct
 	{
+		DWORD64 ForceJump;
+		DWORD64 ForceCrouch;
+		DWORD64 ForceForward;
+		DWORD64 ForceLeft;
+		DWORD64 ForceRight;
+
+		DWORD64 ServerDLL;
 		DWORD64 ClientDLL;
 		DWORD64 EntityList;
 		DWORD64 Matrix;
@@ -16,7 +23,7 @@ private:
 		DWORD64 EntityListEntry;
 		DWORD64 LocalController;
 		DWORD64 LocalPawn;
-		DWORD64 ForceJump;
+		DWORD64 ServerPawn;
 		DWORD64 GlobalVars;
 	}Address;
 
@@ -28,6 +35,7 @@ public:
 	bool InitAddress();
 
 	DWORD64 GetClientDLLAddress();
+	DWORD64 GetServerDLLAddress();
 
 	DWORD64 GetEntityListAddress();
 
@@ -41,6 +49,8 @@ public:
 
 	DWORD64 GetLocalPawnAddress();
 
+	DWORD64 GetServerPawnAddress();
+
 	DWORD64 GetGlobalVarsAddress();
 
 	bool UpdateEntityListEntry();
@@ -48,6 +58,11 @@ public:
 	bool SetViewAngle(float Yaw, float Pitch);
 
 	bool SetForceJump(int Value);
+	bool GetForceJump(int& Value);
+	bool SetForceCrouch(int Value);
+	bool GetForceCrouch(int& Value);
+	bool SetForceMove(int MovingType, int Value);
+	bool GetForceMove(int MovingType, int& Value);
 };
 
 inline CGame gGame;

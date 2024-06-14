@@ -8,7 +8,7 @@ int GetSignatureArray(const std::string& Signature, std::vector<WORD>& Signature
 {
 	std::string Sig = Signature;
 	Sig.erase(std::remove(Sig.begin(), Sig.end(), ' '), Sig.end());
-	
+
 	std::size_t Size = Sig.size();
 
 	if (Size % 2 != 0)
@@ -83,7 +83,7 @@ std::vector<DWORD64> ProcessManager::SearchMemory(const std::string& Signature, 
 				goto END;
 
 			SearchMemoryBlock(MemoryBuffer, NextArray, SignatureArray, StartAddress + (BLOCKMAXSIZE * Count), BLOCKMAXSIZE, ResultArray);
-			
+
 			BlockSize -= BLOCKMAXSIZE;
 			Count++;
 		}

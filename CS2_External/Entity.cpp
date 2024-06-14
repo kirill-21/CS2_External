@@ -1,5 +1,61 @@
 #include "Entity.h"
 
+
+std::map<int, std::string> CEntity::weaponNames = {
+	{1, "deagle"},
+	{2, "elite"},
+	{3, "fiveseven"},
+	{4, "glock"},
+	{7, "ak47"},
+	{8, "aug"},
+	{9, "awp"},
+	{10, "famas"},
+	{11, "g3Sg1"},
+	{13, "galilar"},
+	{14, "m249"},
+	{17, "mac10"},
+	{19, "p90"},
+	{23, "mp5sd"},
+	{24, "ump45"},
+	{25, "xm1014"},
+	{26, "bizon"},
+	{27, "mag7"},
+	{28, "negev"},
+	{29, "sawedoff"},
+	{30, "tec9"},
+	{31, "zeus"},
+	{32, "p2000"},
+	{33, "mp7"},
+	{34, "mp9"},
+	{35, "nova"},
+	{36, "p250"},
+	{38, "scar20"},
+	{39, "sg556"},
+	{40, "ssg08"},
+	{42, "ct_knife"},
+	{43, "flashbang"},
+	{44, "hegrenade"},
+	{45, "smokegrenade"},
+	{46, "molotov"},
+	{47, "decoy"},
+	{48, "incgrenade"},
+	{49, "c4"},
+	{16, "m4a1"},
+	{61, "usp"},
+	{60, "m4a1_silencer"},
+	{63, "cz75a"},
+	{64, "revolver"},
+	{59, "t_knife"}
+};
+
+inline std::string CEntity::GetWeaponName(int weaponID) {
+	auto it = weaponNames.find(weaponID);
+	if (it != weaponNames.end()) {
+		return it->second;
+	}
+	return "Weapon_None";
+}
+
 bool CEntity::UpdateController(const DWORD64& PlayerControllerAddress)
 {
 	if (PlayerControllerAddress == 0)
@@ -13,6 +69,8 @@ bool CEntity::UpdateController(const DWORD64& PlayerControllerAddress)
 	if (!this->Controller.GetTeamID())
 		return false;
 	if (!this->Controller.GetPlayerName())
+		return false;
+	if (!this->Controller.GetMoney())
 		return false;
 
 	this->Pawn.Address = this->Controller.GetPlayerPawnAddress();
@@ -40,6 +98,12 @@ bool CEntity::UpdatePawn(const DWORD64& PlayerPawnAddress)
 		return false;
 	if (!this->Pawn.GetHealth())
 		return false;
+	if (!this->Pawn.GetAmmo())
+		return false;
+	if (!this->Pawn.GetMaxAmmo())
+		return false;
+	if (!this->Pawn.GetArmor())
+		return false;
 	if (!this->Pawn.GetTeamID())
 		return false;
 	if (!this->Pawn.GetFov())
@@ -48,12 +112,41 @@ bool CEntity::UpdatePawn(const DWORD64& PlayerPawnAddress)
 		return false;
 	if (!this->Pawn.GetFFlags())
 		return false;
+	if (!this->Pawn.GetDefusing())
+		return false;
+	if (!this->Pawn.GetFlashDuration())
+		return false;
+	if (!this->Pawn.GetVelocity())
+		return false;
 	if (!this->Pawn.GetAimPunchCache())
 		return false;
 	if (!this->Pawn.BoneData.UpdateAllBoneData(PlayerPawnAddress))
 		return false;
 
 	return true;
+}
+
+bool CEntity::UpdateClientData()
+{
+	if (!this->Client.GetSensitivity())
+		return false;
+
+	return true;
+}
+
+bool PlayerController::GetMoney()
+{
+	DWORD64 MoneyServices;
+	if (!ProcessMgr.ReadMemory(Address + Offset::InGameMoneyServices.MoneyServices, MoneyServices))
+	{
+		return false;
+	}
+	else {
+		GetDataAddressWithOffset<int>(MoneyServices, Offset::InGameMoneyServices.Account, this->Money);
+		GetDataAddressWithOffset<int>(MoneyServices, Offset::InGameMoneyServices.CashSpentThisRound, this->CashSpent);
+		GetDataAddressWithOffset<int>(MoneyServices, Offset::InGameMoneyServices.TotalCashSpent, this->CashSpentTotal);
+		return true;
+	}
 }
 
 bool PlayerController::GetTeamID()
@@ -100,28 +193,25 @@ bool PlayerPawn::GetSpotted()
 	return GetDataAddressWithOffset<DWORD64>(Address, Offset::Pawn.bSpottedByMask, this->bSpottedByMask);
 }
 
+
 bool PlayerPawn::GetWeaponName()
 {
 	DWORD64 WeaponNameAddress = 0;
-	char Buffer[40]{};
+	char Buffer[256]{};
 	
 	WeaponNameAddress = ProcessMgr.TraceAddress(this->Address + Offset::Pawn.pClippingWeapon, { 0x10,0x20 ,0x0 });
 	if (WeaponNameAddress == 0)
 		return false;
 
-	if (!ProcessMgr.ReadMemory(WeaponNameAddress, Buffer, 40))
+	DWORD64 CurrentWeapon;
+	short weaponIndex;
+	ProcessMgr.ReadMemory(this->Address + Offset::Pawn.pClippingWeapon, CurrentWeapon);
+	ProcessMgr.ReadMemory(CurrentWeapon + Offset::EconEntity.AttributeManager + Offset::WeaponBaseData.Item + Offset::WeaponBaseData.ItemDefinitionIndex, weaponIndex);
+
+	if (weaponIndex == -1)
 		return false;
 
-	WeaponName = std::string(Buffer);
-	std::size_t Index = WeaponName.find("_");
-	if (Index == std::string::npos || WeaponName.empty())
-	{
-		WeaponName = "Weapon_None";
-	}
-	else
-	{
-		WeaponName = WeaponName.substr(Index + 1, WeaponName.size() - Index - 1);
-	}
+	WeaponName = CEntity::GetWeaponName(weaponIndex);
 
 	return true;
 }
@@ -176,6 +266,32 @@ bool PlayerPawn::GetHealth()
 	return GetDataAddressWithOffset<int>(Address, Offset::Pawn.CurrentHealth, this->Health);
 }
 
+bool PlayerPawn::GetArmor()
+{
+	return GetDataAddressWithOffset<int>(Address, Offset::Pawn.CurrentArmor, this->Armor);
+}
+
+bool PlayerPawn::GetAmmo()
+{
+	DWORD64 ClippingWeapon = 0;
+	if (!ProcessMgr.ReadMemory<DWORD64>(Address + Offset::Pawn.pClippingWeapon, ClippingWeapon))
+		return false;
+
+	return GetDataAddressWithOffset<int>(ClippingWeapon, Offset::WeaponBaseData.Clip1, this->Ammo);
+}
+
+bool PlayerPawn::GetMaxAmmo()
+{
+	DWORD64 ClippingWeapon = 0;
+	DWORD64 WeaponData = 0;
+	if (!ProcessMgr.ReadMemory<DWORD64>(Address + Offset::Pawn.pClippingWeapon, ClippingWeapon))
+		return false;
+	if (!ProcessMgr.ReadMemory<DWORD64>(ClippingWeapon + Offset::WeaponBaseData.WeaponDataPTR, WeaponData))
+		return false;
+
+	return GetDataAddressWithOffset<int>(WeaponData, Offset::WeaponBaseData.MaxClip, this->MaxAmmo);
+}
+
 bool PlayerPawn::GetFov()
 {
 	DWORD64 CameraServices = 0;
@@ -187,6 +303,25 @@ bool PlayerPawn::GetFov()
 bool PlayerPawn::GetFFlags()
 {
 	return GetDataAddressWithOffset<int>(Address, Offset::Pawn.fFlags, this->fFlags);
+}
+
+bool PlayerPawn::GetDefusing()
+{
+	return ProcessMgr.ReadMemory(Address + Offset::C4.m_bBeingDefused, this->isDefusing);
+}
+
+bool PlayerPawn::GetFlashDuration()
+{
+	return ProcessMgr.ReadMemory(Address + Offset::Pawn.flFlashDuration, this->FlashDuration);
+}
+
+bool PlayerPawn::GetVelocity()
+{
+	Vec3 Velocity;
+	if (!ProcessMgr.ReadMemory(Address + Offset::Pawn.AbsVelocity, Velocity))
+		return false;
+	this->Speed = sqrt(Velocity.x * Velocity.x + Velocity.y * Velocity.y);
+	return true;
 }
 
 bool CEntity::IsAlive()
@@ -204,4 +339,18 @@ CBone CEntity::GetBone() const
 	if (this->Pawn.Address == 0)
 		return CBone{};
 	return this->Pawn.BoneData;
+}
+
+bool Client::GetSensitivity()
+{
+	DWORD64 dwSensitivity;
+	float flSensitivity;
+	ProcessMgr.ReadMemory(gGame.GetClientDLLAddress() + Offset::Sensitivity, dwSensitivity);
+	if (ProcessMgr.ReadMemory(dwSensitivity + 0x40, flSensitivity))
+	{
+		this->Sensitivity = flSensitivity;
+		return true;
+	}
+	else
+		return false;
 }
