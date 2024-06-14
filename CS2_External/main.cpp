@@ -14,12 +14,12 @@ int main()
 {
 	auto ProcessStatus = ProcessMgr.Attach("cs2.exe");
 	char documentsPath[MAX_PATH];
-	if (SHGetFolderPathA(NULL, CSIDL_PERSONAL, NULL, 0, documentsPath) != S_OK) {
+	if (SHGetFolderPathA(NULL, CSIDL_PROFILE, NULL, 0, documentsPath) != S_OK) {
 		std::cerr << "Failed to get the Documents folder path." << std::endl;
 		goto END;
 	}
 	MenuConfig::path = documentsPath;
-	MenuConfig::path += "\\TKazer";
+	MenuConfig::path += "\\Documents\\TKazer";
 
 	if (ProcessStatus != StatusCode::SUCCEED)
 	{
