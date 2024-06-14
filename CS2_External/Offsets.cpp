@@ -79,6 +79,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// C_BaseEntity
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -94,6 +95,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// C_BasePlayerPawn
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -109,6 +111,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// C_BasePlayerPawn
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -124,6 +127,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// CCSPlayerController_InGameMoneyServices
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -139,6 +143,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// C_SmokeGrenadeProjectile
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -154,6 +159,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// C_PlantedC4
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -169,6 +175,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// C_AttributeContainer
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -184,6 +191,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// CPlayer_WeaponServices
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -199,6 +207,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// C_CSWeaponBase
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -214,6 +223,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// CBasePlayerWeaponVData
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -229,6 +239,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// C_BasePlayerWeapon
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -244,6 +255,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// CCSWeaponBaseVData
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -259,6 +271,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// C_CSPlayerPawn
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -274,6 +287,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// C_EconItemView
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -289,6 +303,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// C_EconEntity
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -304,6 +319,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// C_CSPlayerPawnBase
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -319,6 +335,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// CCSPlayer_ViewModelServices
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -334,6 +351,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// CPlayer_MovementServices_Humanoid
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -349,6 +367,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// CCSPlayer_BulletServices
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -364,6 +383,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// CBasePlayerController
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -379,6 +399,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// CCSPlayerBase_CameraServices
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -394,6 +415,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// EntitySpottedState_t
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
@@ -409,6 +431,7 @@ bool Offset::UpdateOffsets()
 	}
 
 	// CPlayer_ObserverServices
+	file.seekg(0, std::ios::beg);
 	try {
 		nlohmann::json json;
 		file >> json;
