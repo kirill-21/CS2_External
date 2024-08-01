@@ -41,7 +41,7 @@ bool Offset::UpdateOffsets()
 
 	std::string dumper_offsets = offsetPath + "\\offsets.json";
 	std::string dumper_buttons = offsetPath + "\\buttons.json";
-	std::string dumper_client = offsetPath + "\\client.dll.json";
+	std::string dumper_client = offsetPath + "\\client_dll.json";
 
 	std::map<std::string, int> offsets, buttons, CCSPlayerController, C_BaseEntity, C_BasePlayerPawn, C_CSPlayerPawn, C_CSPlayerPawnBase,
 		CCSPlayer_ViewModelServices, CPlayer_MovementServices_Humanoid, CCSPlayer_BulletServices, CBasePlayerController,
